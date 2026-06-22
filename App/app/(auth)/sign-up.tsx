@@ -23,38 +23,54 @@ export default function SignUpScreen() {
   const [code, setCode] = useState("");
 
   const onSignUpPress = async () => {
-    const { error } = await signUp.password({
-      emailAddress: email,
-      password,
-      firstName,
-      lastName,
-    });
-    if (error) {
-      console.error(JSON.stringify(error, null, 2));
-      return;
+    try {
+      const { error } = await signUp.password({
+        emailAddress: email,
+        password,
+        firstName,
+        lastName,
+      });
+      
+      if (error) {
+        console.error("Sign-up error:", JSON.stringify(error, null, 2));
+        return;
+      }
+      
+      // Send verification code after successful password sign-up
+      await signUp.verifications.sendEmailCode();
+    } catch (err) {
+      console.error("Error in sign-up:", err);
     }
-
-    if (!error) await signUp.verifications.sendEmailCode();
   };
 
   const onVerifyPress = async () => {
-    await signUp.verifications.verifyEmailCode({
-      code,
-    });
-
-    if (signUp.status === "complete") {
-      await signUp.finalize({
-        navigate: ({ session, decorateUrl }) => {
-          if (session?.currentTask) {
-            console.log(session?.currentTask);
-            return;
-          }
-          const url = decorateUrl("/");
-          router.replace(url as any);
-        },
+    try {
+      const result = await signUp.verifications.verifyEmailCode({
+        code,
       });
-    } else {
-      console.error("Sign-up attempt not complete:", signUp);
+
+      if (result.error) {
+        console.error("Verification error:", result.error);
+        return;
+      }
+
+      if (signUp.status === "complete") {
+        await signUp.finalize({
+          navigate: ({ session, decorateUrl }) => {
+            if (session?.currentTask) {
+              console.log("Session current task:", session?.currentTask);
+              return;
+            }
+            const url = decorateUrl("/");
+            router.replace(url as any);
+          },
+        });
+      } else {
+        console.error("Sign-up attempt not complete. Status:", signUp.status);
+        console.error("Sign-up object:", signUp);
+      }
+    } catch (err) {
+      console.error("Error in verification:", err);
     }
   };
 
@@ -192,7 +208,7 @@ export default function SignUpScreen() {
 
         <TouchableOpacity
           onPress={onSignUpPress}
-          disabled={isLoading}
+          disabled={isLoading || !email || !password || !firstName || !lastName}
           className="w-full bg-blue-600 py-4 rounded-xl items-center mb-4"
         >
           {isLoading ? (

@@ -20,55 +20,71 @@ export default function SignInScreen() {
   const [code, setCode] = useState("");
 
   const onSignInPress = async () => {
-    const { error } = await signIn.password({
-      emailAddress: email,
-      password,
-    });
-    if (error) {
-      return;
-    }
-
-    if (signIn.status === "complete") {
-      await signIn.finalize({
-        navigate: ({ session, decorateUrl }) => {
-          if (session?.currentTask) {
-            console.log(session?.currentTask);
-            return;
-          }
-          const url = decorateUrl("/");
-          router.replace(url as any);
-        },
+    try {
+      const { error } = await signIn.password({
+        emailAddress: email,
+        password,
       });
-    } else if (signIn.status === "needs_second_factor") {
-      await signIn.mfa.sendPhoneCode();
-    } else if (signIn.status === "needs_client_trust") {
-      const emailCodeFactor = signIn.supportedSecondFactors.find(
-        (factor) => factor.strategy === "email_code"
-      );
-      if (emailCodeFactor) {
-        await signIn.mfa.sendEmailCode();
+      if (error) {
+        console.error("Sign-in error:", JSON.stringify(error, null, 2));
+        return;
       }
-    } else {
-      console.error("Sign-in attempt not complete:", signIn);
+
+      if (signIn.status === "complete") {
+        await signIn.finalize({
+          navigate: ({ session, decorateUrl }) => {
+            if (session?.currentTask) {
+              console.log("Session current task:", session?.currentTask);
+              return;
+            }
+            const url = decorateUrl("/");
+            router.replace(url as any);
+          },
+        });
+      } else if (signIn.status === "needs_second_factor") {
+        await signIn.mfa.sendPhoneCode();
+      } else if (signIn.status === "needs_client_trust") {
+        const emailCodeFactor = signIn.supportedSecondFactors.find(
+          (factor) => factor.strategy === "email_code"
+        );
+        if (emailCodeFactor) {
+          await signIn.mfa.sendEmailCode();
+        }
+      } else {
+        console.error("Sign-in attempt not complete. Status:", signIn.status);
+        console.error("Sign-in object:", signIn);
+      }
+    } catch (err) {
+      console.error("Error in sign-in:", err);
     }
   };
 
   const onVerifyPress = async () => {
-    await signIn.mfa.verifyEmailCode({ code });
+    try {
+      const result = await signIn.mfa.verifyEmailCode({ code });
 
-    if (signIn.status === "complete") {
-      await signIn.finalize({
-        navigate: ({ session, decorateUrl }) => {
-          if (session?.currentTask) {
-            console.log(session?.currentTask);
-            return;
-          }
-          const url = decorateUrl("/");
-          router.replace(url as any);
-        },
-      });
-    } else {
-      console.error("Sign-in attempt not complete:", signIn);
+      if (result.error) {
+        console.error("Verification error:", result.error);
+        return;
+      }
+
+      if (signIn.status === "complete") {
+        await signIn.finalize({
+          navigate: ({ session, decorateUrl }) => {
+            if (session?.currentTask) {
+              console.log("Session current task:", session?.currentTask);
+              return;
+            }
+            const url = decorateUrl("/");
+            router.replace(url as any);
+          },
+        });
+      } else {
+        console.error("Sign-in attempt not complete. Status:", signIn.status);
+        console.error("Sign-in object:", signIn);
+      }
+    } catch (err) {
+      console.error("Error in verification:", err);
     }
   };
 
@@ -174,7 +190,7 @@ export default function SignInScreen() {
 
         <TouchableOpacity
           onPress={onSignInPress}
-          disabled={isLoading}
+          disabled={isLoading || !email || !password}
           className="w-full bg-blue-600 py-4 rounded-xl items-center mb-4"
         >
           {isLoading ? (
