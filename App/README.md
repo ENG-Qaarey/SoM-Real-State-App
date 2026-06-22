@@ -1,7 +1,4 @@
-# React Native Full Course 2026 - Build Kribb (Full Stack App for IOS and Android)
-### https://youtu.be/WSppuT4A09Y
-<img width="960" height="540" alt="1" src="https://github.com/user-attachments/assets/f38d2b84-38a1-4d7e-964c-9225258de2ac" />
-
+# React Native Full Course 2026 - Build SoM-Real-State (Full Stack App for IOS and Android)
 
 ## Get started
 
